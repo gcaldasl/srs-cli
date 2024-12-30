@@ -11,10 +11,10 @@ import (
 )
 
 type CLI struct {
-	service *services.SRSService
+	service *services.CardService
 }
 
-func NewCLI(service *services.SRSService) *CLI {
+func NewCLI(service *services.CardService) *CLI {
 	return &CLI{service: service}
 }
 
@@ -77,6 +77,7 @@ func (c *CLI) reviewCard(reader *bufio.Reader) {
 	qualityStr = strings.TrimSpace(qualityStr)
 	quality, err := strconv.Atoi(qualityStr)
 	if err != nil || quality < 0 || quality > 5 {
+		fmt.Printf("quality %d", quality)
 		fmt.Println("Invalid quality score")
 		return
 	}

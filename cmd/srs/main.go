@@ -18,7 +18,7 @@ func main() {
 	defer conn.Close()
 
 	var repo ports.CardRepository = persistence.NewSQLiteRepository(conn)
-	srsService := services.NewSRSService(repo)
-	cli := cli.NewCLI(srsService)
-	cli.Run()
+	cardService := services.NewCardService(repo)
+	app := cli.NewCLI(cardService)
+	app.Run()
 }
