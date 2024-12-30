@@ -3,7 +3,7 @@ package cli
 import (
 	"bufio"
 	"fmt"
-	"os"
+	"github.com/manifoldco/promptui"
 	"strconv"
 	"strings"
 
@@ -19,25 +19,41 @@ func NewCLI(service *services.CardService) *CLI {
 }
 
 func (c *CLI) Run() {
-	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Println("\n1. Create a new card")
-		fmt.Println("2. Review a card")
-		fmt.Println("3. List due cards")
-		fmt.Println("4. Exit")
-		fmt.Print("Choose an option: ")
+		fmt.Println()
+		prompt := promptui.Select{
+			Label: "Select an option",
+			Items: []string{
+				"Review",
+				"Create Deck",
+				"Create Card",
+				"Add Card to Deck",
+				"Remove Card From Deck",
+				"Delete Deck",
+				"Exit",
+			},
+		}
 
-		choice, _ := reader.ReadString('\n')
-		choice = strings.TrimSpace(choice)
+		_, result, err := prompt.Run()
+		if err != nil {
+			fmt.Println("Prompt failed:", err)
+			continue
+		}
 
-		switch choice {
-		case "1":
-			c.createCard(reader)
-		case "2":
-			c.reviewCard(reader)
-		case "3":
-			c.listDueCards()
-		case "4":
+		switch result {
+		case "Review":
+			return
+		case "Create Deck":
+			return
+		case "Create Card":
+			return
+		case "Add Card to Deck":
+			return
+		case "Remove Card from Deck":
+			return
+		case "Delete Deck":
+			return
+		case "Exit":
 			return
 		default:
 			fmt.Println("Invalid choice, please try again.")
