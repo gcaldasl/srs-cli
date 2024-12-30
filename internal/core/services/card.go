@@ -9,10 +9,14 @@ import (
 
 type CardService struct {
 	repo ports.CardRepository
+	sm2  *domain.SM2Calculator
 }
 
 func NewCardService(repo ports.CardRepository) *CardService {
-	return &CardService{repo: repo}
+	return &CardService{
+		repo: repo,
+		sm2:  domain.NewSM2Calculator(),
+	}
 }
 
 func (s *CardService) CreateCard(frontSide, backSide string) error {
@@ -34,26 +38,7 @@ func (s *CardService) ReviewCard(cardID int64, quality int) error {
 		return err
 	}
 
-	if quality >= 3 {
-		if card.Interval == 0 {
-			card.Interval = 1
-		} else if card.Interval == 1 {
-			card.Interval = 6
-		} else {
-			card.Interval = int(float64(card.Interval) * card.EaseFactor)
-		}
-	} else {
-		card.Interval = 1
-	}
-
-	card.EaseFactor = card.EaseFactor + (0.1 - (5-float64(quality))*(0.08+(5-float64(quality))*0.02))
-	if card.EaseFactor < 1.3 {
-		card.EaseFactor = 1.3
-	}
-
-	card.LastReviewed = time.Now()
-	card.NextReview = time.Now().AddDate(0, 0, card.Interval)
-
+	s.sm2.Calculate(card, quality)
 	return s.repo.Update(card)
 }
 
