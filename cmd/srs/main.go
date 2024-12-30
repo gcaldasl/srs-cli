@@ -11,14 +11,14 @@ import (
 )
 
 func main() {
-		conn, err := db.InitDB()
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer conn.Close()
+	conn, err := db.InitDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
 
-		var repo ports.CardRepository = persistence.NewSQLiteRepository(conn)
-		srsService := services.NewSRSService(repo)
-		cli := cli.NewCLI(srsService)
-		cli.Run()
+	var repo ports.CardRepository = persistence.NewSQLiteRepository(conn)
+	srsService := services.NewSRSService(repo)
+	cli := cli.NewCLI(srsService)
+	cli.Run()
 }
