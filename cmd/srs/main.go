@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 
-	"github.com/gcaldasl/srs-cli/internal/adapters/cli"
-	"github.com/gcaldasl/srs-cli/internal/adapters/db"
+	"github.com/gcaldasl/srs-cli/internal/adapters/primary/cli"
+	"github.com/gcaldasl/srs-cli/internal/adapters/secondary/persistence"
 	"github.com/gcaldasl/srs-cli/internal/core/ports"
 	"github.com/gcaldasl/srs-cli/internal/core/services"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/gcaldasl/srs-cli/internal/db"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 		}
 		defer conn.Close()
 
-		repo := ports.NewSQLiteRepository(conn)
+		var repo ports.CardRepository = persistence.NewSQLiteRepository(conn)
 		srsService := services.NewSRSService(repo)
 		cli := cli.NewCLI(srsService)
 		cli.Run()
