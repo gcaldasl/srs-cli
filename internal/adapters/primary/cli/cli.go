@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"strconv"
@@ -72,7 +71,7 @@ func (c *CLI) Run() {
 func (c *CLI) handleMenuChoice(choice string) error {
 	switch choice {
 	case "Review":
-		return nil
+		return c.handleReview()
 	case "Create Deck":
 		return nil
 	case "Create Card":
@@ -131,50 +130,42 @@ func (c *CLI) handleCreateCard() error {
 	return nil
 }
 
-func (c *CLI) reviewCard(reader *bufio.Reader) {
-	fmt.Print("Enter card ID to review: ")
-	idStr, _ := reader.ReadString('\n')
-	idStr = strings.TrimSpace(idStr)
-	cardID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		fmt.Println("Invalid card ID")
-		return
-	}
-
-	fmt.Print("Enter review quality (0-5): ")
-	qualityStr, _ := reader.ReadString('\n')
-	qualityStr = strings.TrimSpace(qualityStr)
-	quality, err := strconv.Atoi(qualityStr)
-	if err != nil || quality < 0 || quality > 5 {
-		fmt.Printf("quality %d", quality)
-		fmt.Println("Invalid quality score")
-		return
-	}
-
-	err = c.service.ReviewCard(cardID, quality)
-	if err != nil {
-		fmt.Println("Error reviewing card:", err)
-	} else {
-		fmt.Println("Card reviewed successfully!")
-	}
-}
-
-func (c *CLI) listDueCards() {
+func (c *CLI) handleReview() error {
 	cards, err := c.service.ListDueCards()
 	if err != nil {
-		fmt.Println("Error listing due cards:", err)
-		return
+		return fmt.Errorf("Error listing due cards: %w", err)
 	}
 
 	if len(cards) == 0 {
-		fmt.Println("No cards due for review.")
-		return
+		fmt.Println("No cards due for review!")
+		return nil
+		// Preciso adicionar lógica pra adiantar revisão de cartas manualmente
 	}
 
-	fmt.Println("Due cards:")
 	for _, card := range cards {
-		fmt.Printf("ID: %d, Front: %s, Back: %s\n", card.ID, card.FrontSide, card.BackSide)
+		fmt.Printf("\nCard ID: %d\n", card.ID)
+		fmt.Printf("Front: %s\n", card.FrontSide)
+
+		if _, err := c.promptForInput("Press Enter to show answer...", false); err != nil {
+			return err
+		}
+
+		fmt.Printf("Back: %s\n", card.BackSide)
+
+		quality, err := c.promptForQuality()
+		if err != nil {
+			if errors.Is(err, ErrOperationCanceled) {
+				continue
+			}
+			return err
+		}
+
+		if err := c.service.ReviewCard(card.ID, quality); err != nil {
+			return fmt.Errorf("error reviewing card %d: %w", card.ID, err)
+		}
 	}
+
+	return nil
 }
 
 func (c *CLI) promptForInput(label string, required bool) (string, error) {
@@ -197,4 +188,39 @@ func (c *CLI) promptForInput(label string, required bool) (string, error) {
 	}
 
 	return strings.TrimSpace(result), nil
+}
+
+func (c *CLI) promptForQuality() (int, error) {
+	fmt.Println("\nRating scale:")
+	fmt.Println("0 - Complete blackout")
+	fmt.Println("1 - Wrong answer")
+	fmt.Println("2 - Wrong answer, but recalled correctly")
+	fmt.Println("3 - Correct with difficulty")
+	fmt.Println("4 - Correct with hesitation")
+	fmt.Println("5 - Perfect recall\n")
+
+	prompt := promptui.Prompt{
+		Label: "Rate your recall (0-5)",
+		Validate: func(input string) error {
+			quality, err := strconv.Atoi(input)
+			if err != nil {
+				return ErrInvalidQuality
+			}
+			if quality < 0 || quality > 5 {
+				return ErrInvalidQuality
+			}
+			return nil
+		},
+	}
+
+	result, err := prompt.Run()
+	if err != nil {
+		if err == promptui.ErrInterrupt {
+			return 0, ErrOperationCanceled
+		}
+		return 0, fmt.Errorf("Quality prompt failed: %w", err)
+	}
+
+	quality, _ := strconv.Atoi(result)
+	return quality, nil
 }
