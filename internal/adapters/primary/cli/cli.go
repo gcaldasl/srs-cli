@@ -76,7 +76,7 @@ func (c *CLI) handleMenuChoice(choice string) error {
 	case "Create Deck":
 		return nil
 	case "Create Card":
-		return nil
+		return c.handleCreateCard()
 	case "Add Card to Deck":
 		return nil
 	case "Remove Card from Deck":
@@ -90,21 +90,45 @@ func (c *CLI) handleMenuChoice(choice string) error {
 	}
 }
 
-func (c *CLI) createCard(reader *bufio.Reader) {
-	fmt.Print("Enter front side of the card: ")
-	frontSide, _ := reader.ReadString('\n')
-	frontSide = strings.TrimSpace(frontSide)
-
-	fmt.Print("Enter back side of the card: ")
-	backSide, _ := reader.ReadString('\n')
-	backSide = strings.TrimSpace(backSide)
-
-	err := c.service.CreateCard(frontSide, backSide)
+func (c *CLI) handleCreateCard() error {
+	frontSide, err := c.promptForInput("Enter front side of the card", true)
 	if err != nil {
-		fmt.Println("Error creating card:", err)
-	} else {
-		fmt.Println("Card created successfully!")
+		return fmt.Errorf("Error getting front side of the card: %w", err)
 	}
+
+	backSide, err := c.promptForInput("Enter back side of the card", true)
+	if err != nil {
+		return fmt.Errorf("Error getting back side of the card: %w", err)
+	}
+
+	confirm := promptui.Prompt{
+		Label:   "Create card with these details? (y/n)",
+		Default: "y",
+		Validate: func(input string) error {
+			input = strings.ToLower(input)
+			if input != "y" && input != "n" {
+				return errors.New("Please enter 'y' or 'n'")
+			}
+
+			return nil
+		},
+	}
+
+	result, err := confirm.Run()
+	if err != nil {
+		return fmt.Errorf("Error confirming card creation: %w", err)
+	}
+
+	if strings.ToLower(result) != "y" {
+		return ErrOperationCanceled
+	}
+
+	if err := c.service.CreateCard(frontSide, backSide); err != nil {
+		return fmt.Errorf("Error creating card: %w", err)
+	}
+
+	fmt.Println("Card created successfully!")
+	return nil
 }
 
 func (c *CLI) reviewCard(reader *bufio.Reader) {
@@ -151,4 +175,26 @@ func (c *CLI) listDueCards() {
 	for _, card := range cards {
 		fmt.Printf("ID: %d, Front: %s, Back: %s\n", card.ID, card.FrontSide, card.BackSide)
 	}
+}
+
+func (c *CLI) promptForInput(label string, required bool) (string, error) {
+	prompt := promptui.Prompt{
+		Label: label,
+		Validate: func(input string) error {
+			if required && strings.TrimSpace(input) == "" {
+				return ErrEmptyInput
+			}
+			return nil
+		},
+	}
+
+	result, err := prompt.Run()
+	if err != nil {
+		if err == promptui.ErrInterrupt {
+			return "", ErrOperationCanceled
+		}
+		return "", fmt.Errorf("prompt failed: %w", err)
+	}
+
+	return strings.TrimSpace(result), nil
 }
