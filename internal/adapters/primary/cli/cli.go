@@ -48,6 +48,11 @@ func (c *CLI) Run() {
 
 		_, result, err := prompt.Run()
 		if err != nil {
+			if errors.Is(err, promptui.ErrInterrupt) {
+				fmt.Println("\nGoodbye!")
+				return
+			}
+
 			fmt.Println("Error displaying menu:", err)
 			continue
 		}
