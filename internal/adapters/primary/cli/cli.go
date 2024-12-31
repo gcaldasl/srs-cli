@@ -2,12 +2,22 @@ package cli
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
-	"github.com/manifoldco/promptui"
 	"strconv"
 	"strings"
 
+	"github.com/manifoldco/promptui"
+
 	"github.com/gcaldasl/srs-cli/internal/core/services"
+)
+
+var (
+	ErrInvalidInput      = errors.New("Invalid input provided.")
+	ErrEmptyInput        = errors.New("Input cannot be empty.")
+	ErrInvalidQuality    = errors.New("Quality score must be between 0 and 5.")
+	ErrInvalidCardID     = errors.New("Invalid card ID.")
+	ErrOperationCanceled = errors.New("Operation canceled by user.")
 )
 
 type CLI struct {
@@ -15,12 +25,15 @@ type CLI struct {
 }
 
 func NewCLI(service *services.CardService) *CLI {
+	if service == nil {
+		panic("Card service can't be nil")
+	}
 	return &CLI{service: service}
 }
 
 func (c *CLI) Run() {
 	for {
-		fmt.Println()
+		fmt.Println("\n=== SRS CLI Application ===")
 		prompt := promptui.Select{
 			Label: "Select an option",
 			Items: []string{
@@ -36,28 +49,44 @@ func (c *CLI) Run() {
 
 		_, result, err := prompt.Run()
 		if err != nil {
-			fmt.Println("Prompt failed:", err)
+			fmt.Println("Error displaying menu:", err)
 			continue
 		}
 
-		switch result {
-		case "Review":
-			return
-		case "Create Deck":
-			return
-		case "Create Card":
-			return
-		case "Add Card to Deck":
-			return
-		case "Remove Card from Deck":
-			return
-		case "Delete Deck":
-			return
-		case "Exit":
-			return
-		default:
-			fmt.Println("Invalid choice, please try again.")
+		if err := c.handleMenuChoice(result); err != nil {
+			if errors.Is(err, ErrOperationCanceled) {
+				fmt.Println("Operation canceled by user.")
+				continue
+			}
+
+			fmt.Printf("Error: %v\n", err)
 		}
+
+		if result == "Exit" {
+			fmt.Println("Goodbye!")
+			return
+		}
+	}
+}
+
+func (c *CLI) handleMenuChoice(choice string) error {
+	switch choice {
+	case "Review":
+		return nil
+	case "Create Deck":
+		return nil
+	case "Create Card":
+		return nil
+	case "Add Card to Deck":
+		return nil
+	case "Remove Card from Deck":
+		return nil
+	case "Delete Deck":
+		return nil
+	case "Exit":
+		return nil
+	default:
+		return ErrInvalidInput
 	}
 }
 
